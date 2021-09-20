@@ -14,7 +14,8 @@ import com.diegomsilva.starwarsrnc.model.Character
 
 class StarWarsApi {
 
-    val service : StarWarsApiDef
+    private val service : StarWarsApiDef
+    private val peopleCache = mutableMapOf<String, Person>()
 
     init {
         var logging = HttpLoggingInterceptor()
@@ -49,7 +50,14 @@ class StarWarsApi {
                     Observable.just(Movie(film.title, film.episodeId, ArrayList<Character>())),
                     Observable.fromIterable(film.personUrls)
                         .flatMap { personUrl ->
-                            Uri.parse(personUrl).lastPathSegment?.let { service.loadPerson(it) }
+                            Observable.concat(
+                                getCache(personUrl),
+                                service.loadPerson(Uri.parse(personUrl).lastPathSegment).doOnNext { person ->
+                                    peopleCache.put(personUrl, person)
+                                },
+                            )
+                                .firstElement()
+                                .toObservable()
                         }
                         .flatMap { person ->
                             Observable.just(Character(person.name, person.gender))
@@ -61,6 +69,19 @@ class StarWarsApi {
                         movie
                     }
                 )
+            }
+    }
+
+    /**
+     * People cache
+     */
+    private fun getCache(personUrl : String) : Observable<Person> {
+        return Observable.fromIterable(peopleCache.keys)
+            .filter { key ->
+                key == personUrl
+            }
+            .flatMap { key ->
+                Observable.just(peopleCache[personUrl])
             }
     }
 

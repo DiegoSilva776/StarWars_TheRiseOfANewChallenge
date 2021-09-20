@@ -10,6 +10,6 @@ interface StarWarsApiDef {
     fun listMovies() : Observable<FilmResult>
 
     @GET("people/{personId}")
-    fun loadPerson(@Path("personId") personId : String) : Observable<Person>
+    fun loadPerson(@Path("personId") personId: String?) : Observable<Person>
 
 }
